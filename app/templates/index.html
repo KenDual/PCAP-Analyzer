@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+<div class="banner banner-err">{{ error }}</div>
+{% endif %}
+
+<section class="drop-card">
+  <form id="upform" method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+    <label id="dropzone" for="pcap" class="dropzone">
+      <div class="dz-mark">&#9636;</div>
+      <div class="dz-title">Drop a capture here</div>
+      <div class="dz-hint">or click to choose &middot; .pcap &middot; .pcapng &middot; .cap &middot; up to {{ max_mb }} MB</div>
+      <div class="dz-file" id="dzfile"></div>
+      <input type="file" id="pcap" name="pcap" accept=".pcap,.pcapng,.cap" hidden>
+    </label>
+    <button type="submit" id="runbtn" class="run-btn" disabled>Run Suricata + Zeek</button>
+  </form>
+</section>
+
+<section class="jobs">
+  <h2 class="section-label">Analyses</h2>
+  {% if not jobs %}
+    <p class="empty">No captures analyzed yet. Drop one above to begin.</p>
+  {% else %}
+  <table class="job-table">
+    <thead>
+      <tr><th>Capture</th><th>Size</th><th>State</th><th class="num t-suri">Alerts</th><th class="num t-zeek">Conns</th><th>When</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td><a class="jobname" href="{{ url_for('job', job_id=j.id) }}">{{ j.filename }}</a></td>
+        <td>{{ j.size | humansize }}</td>
+        <td>
+          <span class="state state-{{ j.state }}">
+            {{ j.state }}{% if j.state in ('running','queued') %} &middot; {{ j.phase }}{% endif %}
+          </span>
+        </td>
+        <td class="num t-suri">{{ j.alerts_total if j.alerts_total is not none else '&mdash;' | safe }}</td>
+        <td class="num t-zeek">{{ j.conn_total if j.conn_total is not none else '&mdash;' | safe }}</td>
+        <td class="when">{{ j.created.replace('T',' ').split('+')[0] }}</td>
+        <td>
+          <form method="post" action="{{ url_for('delete', job_id=j.id) }}" onsubmit="return confirm('Delete this analysis and its output?');">
+            <button class="del" title="Delete">&times;</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const input = document.getElementById('pcap');
+  const zone = document.getElementById('dropzone');
+  const btn = document.getElementById('runbtn');
+  const fileLabel = document.getElementById('dzfile');
+
+  function show(file) {
+    if (!file) return;
+    fileLabel.textContent = file.name + '  (' + (file.size/1048576).toFixed(1) + ' MB)';
+    btn.disabled = false;
+  }
+  input.addEventListener('change', () => show(input.files[0]));
+
+  ['dragenter','dragover'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('over'); }));
+  zone.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      show(input.files[0]);
+    }
+  });
+  document.getElementById('upform').addEventListener('submit', () => {
+    btn.disabled = true; btn.textContent = 'Uploading\u2026';
+  });
+</script>
+{% endblock %}

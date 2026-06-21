@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}{{ job.filename }} &middot; TANDEM{% endblock %}
+{% block content %}
+
+<a class="back" href="{{ url_for('index') }}">&larr; all analyses</a>
+
+<header class="result-head">
+  <h1 class="capname">{{ job.filename }}</h1>
+  <div class="meta">
+    {{ job.size | humansize }}
+    {% if job.duration %}&middot; analyzed in {{ job.duration }}s{% endif %}
+    {% if job.finished %}&middot; {{ job.finished.replace('T',' ').split('+')[0] }} UTC{% endif %}
+  </div>
+</header>
+
+{# ----------------------------------------------------------------- RUNNING #}
+{% if job.state in ('queued', 'running') %}
+<section class="running" id="running" data-job="{{ job.id }}">
+  <div class="spinner"></div>
+  <div class="run-phase">Phase: <strong id="phase">{{ job.phase }}</strong></div>
+  <ol class="phase-steps">
+    <li data-p="suricata" class="t-suri">Suricata signature scan</li>
+    <li data-p="zeek" class="t-zeek">Zeek protocol logging</li>
+    <li data-p="parsing">Parsing &amp; summarizing</li>
+  </ol>
+  <p class="muted">This page refreshes itself. Large captures take a while.</p>
+</section>
+
+{# ------------------------------------------------------------------- ERROR #}
+{% elif job.state == 'error' %}
+<section class="banner banner-err">
+  Analysis failed during <strong>{{ job.phase }}</strong>: {{ job.error }}
+</section>
+{% if job.suricata_run and job.suricata_run.stderr %}
+<details class="raw-log"><summary>Suricata stderr</summary><pre>{{ job.suricata_run.stderr }}</pre></details>
+{% endif %}
+{% if job.zeek_run and job.zeek_run.stderr %}
+<details class="raw-log"><summary>Zeek stderr</summary><pre>{{ job.zeek_run.stderr }}</pre></details>
+{% endif %}
+
+{# -------------------------------------------------------------------- DONE #}
+{% elif summary %}
+{% set s = summary.suricata %}
+{% set z = summary.zeek %}
+
+<div class="scorecards">
+  <div class="card card-suri">
+    <div class="card-n">{{ s.alerts_total }}</div>
+    <div class="card-l">Suricata alerts</div>
+  </div>
+  <div class="card card-zeek">
+    <div class="card-n">{{ z.conn.total if z.conn else 0 }}</div>
+    <div class="card-l">Zeek connections</div>
+  </div>
+  <div class="card">
+    <div class="card-n">{{ z.dns.total if z.dns else 0 }}</div>
+    <div class="card-l">DNS queries</div>
+  </div>
+  <div class="card">
+    <div class="card-n">{{ z.files.total if z.files else 0 }}</div>
+    <div class="card-l">Files seen</div>
+  </div>
+</div>
+
+{# ============================ SURICATA ============================ #}
+<section class="engine engine-suri">
+  <h2 class="engine-title t-suri">Suricata &middot; signatures</h2>
+  {% if not s.available %}
+    <p class="muted">No Suricata output (eve.json missing).</p>
+  {% elif s.alerts_total == 0 %}
+    <p class="muted">No rule matched this capture. (Check the ET Open ruleset is current.)</p>
+  {% else %}
+    {% if s.by_severity %}
+    <div class="chips">
+      {% for sev, n in s.by_severity.items() %}
+        <span class="chip sev-{{ sev }}">sev {{ sev }} &middot; {{ n }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3 class="sub">Top signatures</h3>
+    <table class="data">
+      <thead><tr><th class="num">#</th><th>Signature</th><th>Category</th><th class="num">Sev</th></tr></thead>
+      <tbody>
+        {% for sig in s.signatures %}
+        <tr>
+          <td class="num strong">{{ sig.count }}</td>
+          <td>{{ sig.signature }}</td>
+          <td class="muted">{{ sig.category }}</td>
+          <td class="num"><span class="sevdot sev-{{ sig.severity }}">{{ sig.severity }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <details class="more">
+      <summary>Individual alerts ({{ s.alerts|length }}{% if s.alerts_truncated %} of {{ s.alerts_total }}, capped{% endif %})</summary>
+      <table class="data small">
+        <thead><tr><th>Time</th><th>Signature</th><th>Source</th><th>Dest</th><th>Proto</th></tr></thead>
+        <tbody>
+          {% for a in s.alerts %}
+          <tr>
+            <td class="mono muted">{{ a.ts.split('.')[0].replace('T',' ') }}</td>
+            <td>{{ a.signature }}</td>
+            <td class="mono">{{ a.src }}</td>
+            <td class="mono">{{ a.dest }}</td>
+            <td>{{ a.proto }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  {% endif %}
+</section>
+
+{# ============================== ZEEK ============================== #}
+<section class="engine engine-zeek">
+  <h2 class="engine-title t-zeek">Zeek &middot; observation</h2>
+  {% if not z.available %}
+    <p class="muted">No Zeek logs were produced for this capture.</p>
+  {% else %}
+
+  <div class="grid2">
+    <div>
+      <h3 class="sub">Top talkers</h3>
+      <table class="data small">
+        <tbody>
+          {% for t in z.conn.top_talkers %}
+          <tr><td class="num strong">{{ t.count }}</td><td class="mono">{{ t.pair }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3 class="sub">Services / protocols</h3>
+      <div class="chips">
+        {% for svc, n in z.conn.services.items() %}<span class="chip">{{ svc }} &middot; {{ n }}</span>{% endfor %}
+      </div>
+      <div class="chips">
+        {% for p, n in z.conn.protos.items() %}<span class="chip chip-quiet">{{ p }} &middot; {{ n }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if z.dns.top %}
+  <h3 class="sub">DNS queries</h3>
+  <div class="chips">
+    {% for d in z.dns.top %}<span class="chip">{{ d.q }} &middot; {{ d.count }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if z.http.top_hosts %}
+  <h3 class="sub">HTTP hosts <span class="muted">({{ z.http.total }} requests &middot; {{ z.http.methods }})</span></h3>
+  <div class="chips">
+    {% for h in z.http.top_hosts %}<span class="chip">{{ h.host }} &middot; {{ h.count }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if z.ssl.top_sni %}
+  <h3 class="sub">TLS server names</h3>
+  <div class="chips">
+    {% for sni in z.ssl.top_sni %}<span class="chip">{{ sni.name }} &middot; {{ sni.count }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if z.files.entries %}
+  <h3 class="sub">Files &amp; hashes <span class="muted">(drop a sha256 into VirusTotal)</span></h3>
+  <table class="data small">
+    <thead><tr><th>MIME</th><th>Bytes</th><th>SHA-256</th></tr></thead>
+    <tbody>
+      {% for fobj in z.files.entries %}
+      <tr>
+        <td>{{ fobj.mime or '&mdash;' | safe }}</td>
+        <td class="num">{{ fobj.bytes }}</td>
+        <td class="mono tiny">{{ fobj.sha256 or '&mdash;' | safe }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if z.notices %}
+  <h3 class="sub">Notices</h3>
+  <table class="data small">
+    <tbody>
+      {% for nobj in z.notices %}
+      <tr><td class="strong">{{ nobj.note }}</td><td class="muted">{{ nobj.msg }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if z.weird %}
+  <h3 class="sub">Weird activity</h3>
+  <div class="chips">
+    {% for w in z.weird %}<span class="chip chip-quiet">{{ w.name }} &middot; {{ w.count }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% endif %}
+</section>
+{% endif %}
+
+{# ============================ RAW FILES =========================== #}
+{% if raw_files.suricata or raw_files.zeek %}
+<section class="raw-files">
+  <h2 class="section-label">Raw output</h2>
+  <div class="grid2">
+    <div>
+      <h3 class="sub t-suri">suricata/</h3>
+      <ul class="filelist">
+        {% for f in raw_files.suricata %}
+        <li><a href="{{ url_for('raw', job_id=job.id, engine='suricata', fname=f) }}">{{ f }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h3 class="sub t-zeek">zeek/</h3>
+      <ul class="filelist">
+        {% for f in raw_files.zeek %}
+        <li><a href="{{ url_for('raw', job_id=job.id, engine='zeek', fname=f) }}">{{ f }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if job.state in ('queued', 'running') %}
+<script>
+  const jobId = document.getElementById('running').dataset.job;
+  async function poll() {
+    try {
+      const r = await fetch(`/job/${jobId}/status.json`, {cache: 'no-store'});
+      const s = await r.json();
+      document.getElementById('phase').textContent = s.phase;
+      document.querySelectorAll('.phase-steps li').forEach(li => {
+        li.classList.toggle('active', li.dataset.p === s.phase);
+      });
+      if (s.state === 'done' || s.state === 'error') { location.reload(); return; }
+    } catch (e) { /* keep polling */ }
+    setTimeout(poll, 2500);
+  }
+  poll();
+</script>
+{% endif %}
+{% endblock %}

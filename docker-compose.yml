@@ -1,0 +1,26 @@
+services:
+  tandem:
+    build: .
+    image: tandem-pcap:latest
+    container_name: tandem
+    restart: unless-stopped
+    ports:
+      # Bind to localhost only — reach it over Tailscale, never expose to WAN.
+      # Change to "8080:8080" if you proxy it through Caddy/nginx instead.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Analysis output + uploads persist here across restarts.
+      - ./data:/data
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - MAX_UPLOAD_MB=2048      # reject pcaps larger than this
+      - GUNICORN_TIMEOUT=3600   # hard ceiling for a single analysis run
+    # The whole point: no host networking, no capabilities, read-only root FS.
+    # Suricata/Zeek here only read files, they never touch a live interface.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
