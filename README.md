@@ -32,7 +32,7 @@ the container; nothing is installed on the host.
 ## Run it
 
 ```bash
-docker compose build
+docker compose up --build -d
 ```
 
 Then reach it at `http://127.0.0.1:8080` — over Tailscale from your laptop/phone,
