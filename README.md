@@ -13,7 +13,9 @@ the container; nothing is installed on the host.
 ```
 
 ## Demo
-![Video Demo of offline Pcap-Analyzer ](media/pcap-final.mp4)
+<p align="center">
+  <video src="https://github.com/KenDual/PCAP-Analyzer/blob/master/media/pcap-final.mp4" width="100%" controls></video>
+</p>
 
 ## What you get per capture
 
