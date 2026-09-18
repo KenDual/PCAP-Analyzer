@@ -14,12 +14,14 @@ the container; nothing is installed on the host.
 
 ## Demo
 <p align="center">
-  <video src="media/pcap-final.mp4" width="100%" controls playsinline>
-    Your browser does not support the video tag. <a href="media/pcap-final.mp4">Watch demo (MP4, 3.2 MB)</a>
-  </video>
+  <a href="https://youtu.be/yQPaaBogqhQ">
+    <img src="https://img.youtube.com/vi/yQPaaBogqhQ/maxresdefault.jpg" width="100%" alt="TANDEM demo — click to play on YouTube">
+  </a>
 </p>
 
-> Fallback: [▶ Watch demo video](media/pcap-final.mp4) — if the player doesn't load, open/download the MP4 directly.
+<p align="center">
+  <a href="https://youtu.be/yQPaaBogqhQ">▶ Watch demo on YouTube</a> · <a href="media/pcap-final.mp4">Download MP4 (3.2 MB)</a>
+</p>
 
 ## What you get per capture
 
