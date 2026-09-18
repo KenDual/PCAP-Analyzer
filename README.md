@@ -14,8 +14,12 @@ the container; nothing is installed on the host.
 
 ## Demo
 <p align="center">
-  <video src="https://github.com/KenDual/PCAP-Analyzer/blob/master/media/pcap-final.mp4" width="100%" controls></video>
+  <video src="media/pcap-final.mp4" width="100%" controls playsinline>
+    Your browser does not support the video tag. <a href="media/pcap-final.mp4">Watch demo (MP4, 3.2 MB)</a>
+  </video>
 </p>
+
+> Fallback: [▶ Watch demo video](media/pcap-final.mp4) — if the player doesn't load, open/download the MP4 directly.
 
 ## What you get per capture
 
@@ -26,7 +30,8 @@ the container; nothing is installed on the host.
 ## Run it
 
 ```bash
-docker compose build```
+docker compose build
+```
 
 Then reach it at `http://127.0.0.1:8080` — over Tailscale from your laptop/phone,
 point your browser at `http://<tailscale-ip-or-name>:8080`. By default the port is
