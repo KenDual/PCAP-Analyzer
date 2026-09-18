@@ -7,10 +7,13 @@ capture in offline mode (`suricata -r`, `zeek -r`) only. Everything stays inside
 the container; nothing is installed on the host.
 
 ```
-        upload .pcap ──► Suricata (-r, signatures) ─┐
-                         Zeek    (-r, protocol logs)─┴─► parsed summary + raw logs
-                                                          └─► web UI / /data volume
+ upload .pcap────►Suricata (-r, signatures)───┐                             
+                  Zeek   (-r, protocol logs)──┴─►parsed summary + raw logs  
+                                                  └─► web UI / /data volume 
 ```
+
+## Demo
+![Video Demo of offline Pcap-Analyzer ](media/pcap-final.mp4)
 
 ## What you get per capture
 
@@ -21,9 +24,7 @@ the container; nothing is installed on the host.
 ## Run it
 
 ```bash
-docker compose build      # first build pulls Suricata 7 + Zeek + ET Open rules
-docker compose up -d
-```
+docker compose build```
 
 Then reach it at `http://127.0.0.1:8080` — over Tailscale from your laptop/phone,
 point your browser at `http://<tailscale-ip-or-name>:8080`. By default the port is
@@ -33,28 +34,7 @@ reverse proxy in front if you want a subdomain.
 ### Headless (no browser)
 
 ```bash
-docker compose run --rm --entrypoint python3 tandem \
-    -m app.cli /data/uploads/capture.pcap
-```
-
-Drop pcaps into `./data/uploads/` on the host to make them visible at
-`/data/uploads/` inside the container.
-
-## Layout
-
-```
-tandem/
-├── Dockerfile            Ubuntu 24.04 + Suricata + Zeek + Flask
-├── docker-compose.yml    single hardened service (read-only FS, cap_drop ALL)
-├── entrypoint.sh         gunicorn launcher
-├── zeek/local.zeek       JSON logs + file hashing for offline analysis
-└── app/
-    ├── app.py            Flask: upload / job list / results / downloads
-    ├── analyzer.py       runs both engines, writes status.json + summary.json
-    ├── parsers.py        eve.json + Zeek logs -> compact summaries
-    ├── cli.py            headless analysis
-    ├── templates/        base / index / results
-    └── static/style.css  dark operator-console UI
+docker compose run --rm --entrypoint python3 tandem -m app.cli /data/uploads/capture.pcap
 ```
 
 ## Configuration (env in `docker-compose.yml`)
