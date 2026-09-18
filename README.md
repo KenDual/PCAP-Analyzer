@@ -20,7 +20,7 @@ the container; nothing is installed on the host.
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/yQPaaBogqhQ">▶ Watch demo on YouTube</a> · <a href="media/pcap-final.mp4">Download MP4 (3.2 MB)</a>
+  <a href="https://youtu.be/yQPaaBogqhQ">▶ Watch demo on YouTube</a>
 </p>
 
 ## What you get per capture
